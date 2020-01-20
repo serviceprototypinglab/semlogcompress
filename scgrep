@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+
+import sys
+
+sterm = sys.argv[1]
+sprop = sys.argv[2]
+
+f = open("_index.dir/index")
+lines = f.readlines()
+f.close()
+
+for line in lines:
+	i, *entry = line.strip().split()
+	entry = " ".join(entry)
+	if sterm in entry:
+		f = open("_index.dir/" + i)
+		proplines = f.readlines()
+		for propline in proplines:
+			if sprop in propline:
+				propline = propline.strip()
+				print(propline)
+		f.close()

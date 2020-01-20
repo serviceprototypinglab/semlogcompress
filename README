@@ -1,0 +1,1 @@
+./semlogcompress -l 3 -v head1000-admin.log

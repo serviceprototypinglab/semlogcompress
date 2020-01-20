@@ -1,0 +1,15 @@
+#!/usr/bin/env python3
+
+import argparse
+import semlogcompress
+
+p = argparse.ArgumentParser(description="Semantic compression of log files.")
+p.add_argument("files", metavar="FILE", type=str, nargs="+", help="Log file(s) to process")
+p.add_argument("-l", "--limit-lines", dest="limit_lines", type=int, help="Only process few lines")
+p.add_argument("-v", "--verbose", dest="verbose", action="store_const", const=True, default=False, help="Turn on verbosity")
+args = p.parse_args()
+
+for fn in args.files:
+	msgs = semlogcompress.process(fn, args.verbose, args.limit_lines)
+	retlist = semlogcompress.handle(msgs, args.verbose)
+	semlogcompress.persist(retlist)
