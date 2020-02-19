@@ -1,0 +1,5 @@
+Random ideas... to be validated with the emerging implementation
+
+local:10.1.1.90/***5*
+ -> here, the * are recognised as numbers but the 5 digits are not yet recognised as contiguous
+ -> should identify as port number because it is close to IP address (more false positive likelihood with lower port numbers though)

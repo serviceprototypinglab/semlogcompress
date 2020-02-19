@@ -57,6 +57,22 @@ def typeget(s):
     else:
         return "mixed"
 
+def printpatterns(dparts, r, extra=""):
+    dblocks = ""
+    lastb = 0
+    oh = 0
+    for dpart in dparts:
+        #if lastb is not None and len(dpart[1]) != 0:
+        #    dblocks += colors["red"] + r[lastb:dpart[0]] + colors["reset"]
+        dblocks += colors["cyan"] + r[lastb:dpart[0]] + colors["reset"]
+        dblocks += colors["red"] + dpart[1] + colors["reset"]
+        lastb = dpart[0] + len(dpart[1])
+        oh += len(str(dpart[0])) + len(dpart[1])
+    if lastb < len(r):
+        dblocks += colors["cyan"] + r[lastb:] + colors["reset"]
+    print("=", dblocks, "(log line with patterns) " + extra)
+    return oh
+
 def handle(msgs, verbose):
     retlist = []
 
@@ -67,12 +83,12 @@ def handle(msgs, verbose):
         types = {}
 
         if verbose:
-            print(colors["yellow"] + msg + colors["reset"])
+            print(colors["yellow"] + "X " + msg + " (cluster)" + colors["reset"])
         alldiff = {}
         exdiff = {}
         for r in msgs[msg]:
             if verbose:
-                print("*", r)
+                print("*", r, "(raw log line)")
             sm = difflib.SequenceMatcher(None, msg, r)
             blocks = sm.get_matching_blocks()
             if verbose:
@@ -91,25 +107,13 @@ def handle(msgs, verbose):
                 cblocks += colors["green"] + r[block.b:block.b + block.size] + colors["reset"]
                 lastb = block.b + block.size
             if verbose:
-                print("→", cblocks)
+                print("→", cblocks, "(diffed log line) (diff count D: " + str(len(diff)) + ")")
                 print("D", colors["magenta"] + str(diff) + colors["reset"])
 
         dparts = sorted(alldiff.items())
         if verbose:
             print("#", dparts)
-        dblocks = ""
-        lastb = 0
-        oh = 0
-        for dpart in dparts:
-            #if lastb is not None and len(dpart[1]) != 0:
-            #    dblocks += colors["red"] + r[lastb:dpart[0]] + colors["reset"]
-            dblocks += colors["cyan"] + r[lastb:dpart[0]] + colors["reset"]
-            dblocks += colors["red"] + dpart[1] + colors["reset"]
-            lastb = dpart[0] + len(dpart[1])
-            oh += len(str(dpart[0])) + len(dpart[1])
-        if lastb < len(r):
-            dblocks += colors["cyan"] + r[lastb:] + colors["reset"]
-        print("=", dblocks)
+        oh = printpatterns(dparts, r)
 
         for j in range(len(dparts)):
             if not dparts[len(dparts) - j - 1][1]:
@@ -126,6 +130,53 @@ def handle(msgs, verbose):
                 offset = dpart[0]
             if verbose:
                 print("[" + str(types[dparts[len(dparts) - j - 1][0]]) + "] " + str(exdiff[dparts[len(dparts) - j - 1][0]][:5]))
+
+        dpartsext = dparts[:]
+        typesext = {}
+        #print("R", r, "T", types)
+        laststop = None
+        for j in range(len(dpartsext)):
+            if dparts[j][1]:
+                start = dparts[j][0]
+                stop = start + len(dparts[j][1]) - 1
+                t = types[dparts[j][0]]
+                #print(dparts[j], t, start, "..", stop)
+                estart = start
+                estop = stop
+                for k in range(1, 99):
+                    if (laststop and start - k == laststop) or start - k < 0:
+                        break
+                    if typeget(r[start - k]) == t:
+                        estart -= 1
+                    else:
+                        break
+                for k in range(1, 99):
+                    if (j < len(dpartsext) - 1 and stop + k == dparts[j + 1][0]) or stop + k == len(r):
+                        break
+                    if typeget(r[stop + k]) == t:
+                        estop += 1
+                    else:
+                        break
+                #print("==> extended type range", estart, estop)
+                dpartsext[j] = (estart, "*" * (estop - estart + 1))
+                typesext[estart] = types[start]
+                laststop = estop
+        if verbose:
+            print("#", dpartsext, "extended")
+        dpartsmer = []
+        for dpart in dpartsext:
+            dpartprev = None
+            if len(dpartsmer):
+                dpartprev = dpartsmer[-1]
+            if dpartprev and types[dpart[0]] == types[dpartprev[0]] and dpartprev[0] + len(dpartprev[1]) == dpart[0]:
+                dpartmer = (dpartprev[0], "*" * (len(dpartprev[1]) + len(dpart[1])))
+                #print("merge", dpartsmer[-1], dpart, "=>", dpartmer)
+                dpartsmer[-1] = dpartmer
+            else:
+                dpartsmer.append(dpart)
+        if verbose:
+            print("#", dpartsmer, "extended and merged")
+        printpatterns(dpartsmer, r, "(extended and merged)")
 
         times = str(len(msgs[msg])) + " times"
         toh += len(msg) + oh
