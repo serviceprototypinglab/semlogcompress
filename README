@@ -1,1 +1,22 @@
-./semlogcompress -l 3 -v head1000-admin.log
+Semantic log compression prototype
+
+The aim of this software is to identify (with some smart logic,
+eventually with some AI) semantic similarities between lines of log
+files and to use these similarities for a high compression ratio.
+
+The 'semlogcompress' tool (we could rename it to 'sc') does the
+compression, and the 'scgrep' tool is for search in analogy to the
+regular grep.
+
+Even though the analysis starts with syntactic tokenisation, the
+potential to compress semantically is high. For instance:
+ 192.168.0.19 -> IP address is 12 bytes long as string
+ as integer: 4 bytes
+ as subnet: 2 fixed bytes + 2 changing bytes
+Often, only few bytes (e.g. IP address, port number, time stamp, user
+id) change while the rest of the log messages remains the same. This
+provides a high potential for compression.
+
+Tool invocation:
+
+Run ./semlogcompress -h to find out about command line parameters.
