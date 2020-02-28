@@ -1,4 +1,4 @@
-Semantic log compression prototype
+Semantic log compression and search prototype
 
 The aim of this software is to identify (with some smart logic,
 eventually with some AI) semantic similarities between lines of log
@@ -6,7 +6,7 @@ files and to use these similarities for a high compression ratio.
 
 The 'semlogcompress' tool (we could rename it to 'sc') does the
 compression, and the 'scgrep' tool is for search in analogy to the
-regular grep.
+regular grep. Later, a notification/alerting tool will be added.
 
 Even though the analysis starts with syntactic tokenisation, the
 potential to compress semantically is high. For instance:

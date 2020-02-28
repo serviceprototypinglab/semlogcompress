@@ -4,3 +4,4 @@ local:10.1.1.90/***5*
  -> here, the * are recognised as numbers but the 5 digits are not yet recognised as contiguous
     !!! in latest implementation, these two change sets are now connected into a contiguous one based on type equality of the '5' in between
  -> should identify as port number because it is close to IP address (more false positive likelihood with lower port numbers though)
+    !!! in latest implementation, the identification is now done (but only for ports, not for IP addresses or anything else yet)
