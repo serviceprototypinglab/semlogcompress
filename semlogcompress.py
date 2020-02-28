@@ -1,6 +1,7 @@
 import difflib
 import sys
 import os
+import re
 
 colors = {
   "red": "\u001b[31m",
@@ -187,6 +188,42 @@ def handle(msgs, verbose):
 
         #retlist.append((msg, exdiff))
         retlist.append((msg, msgs[msg]))
+
+        knowledge = {}
+        lastpos = 0
+        lastlen = 0
+        for dpart in dpartsmer:
+            if not len(dpart[1]):
+                continue
+            semtype = "unknown"
+            if types[dpart[0]] == "digit" and len(dpart[1]) in (4, 5):
+                semtype = "portnumber"
+            i = 1
+            semtypeorig = semtype
+            while semtype in knowledge:
+                i += 1
+                semtype = semtypeorig + str(i)
+            semre = ""
+            if semtypeorig == "portnumber":
+                semre = "(\\d{1," + str(len(dpart[1])) + "})"
+            else:
+                semre = "(.{1," + str(len(dpart[1])) + "})"
+            regex = msg[lastpos + lastlen:dpart[0] + 1] + semre
+            print(">", semtype, regex)
+            data = []
+            print(">>", lastpos, "..", dpart[0], regex)
+            for r in msgs[msg]:
+                sr = re.search(regex, r)
+                if sr:
+                    m = sr.group(1)
+                    print("   M", m)
+                    data.append(m)
+            #for r in msgs[msg]:
+            #    data.append(r[dpart[0]:dpart[0] + len(dpart[1])])
+            knowledge[semtype] = data
+            lastpos = dpart[0]
+            lastlen = len(dpart[1]) + 1
+        print(">>> knowledge", knowledge)
 
     tlen = 0
     tlines = 0
