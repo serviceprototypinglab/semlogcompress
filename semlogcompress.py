@@ -209,14 +209,17 @@ def handle(msgs, verbose):
             else:
                 semre = "(.{1," + str(len(dpart[1])) + "})"
             regex = msg[lastpos + lastlen:dpart[0] + 1] + semre
-            print(">", semtype, regex)
+            if verbose:
+                print(">", semtype, regex)
             data = []
-            print(">>", lastpos, "..", dpart[0], regex)
+            if verbose:
+                print(">>", lastpos, "..", dpart[0], regex)
             for r in msgs[msg]:
                 sr = re.search(regex, r)
                 if sr:
                     m = sr.group(1)
-                    print("   M", m)
+                    if verbose:
+                        print("   M", m)
                     data.append(m)
             #for r in msgs[msg]:
             #    data.append(r[dpart[0]:dpart[0] + len(dpart[1])])
