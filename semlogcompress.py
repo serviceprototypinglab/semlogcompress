@@ -17,7 +17,10 @@ colors = {
 def process(fn, verbose, limit_lines):
     msgs = {}
 
-    f = open(fn)
+    if fn == "-":
+        f = sys.stdin
+    else:
+        f = open(fn)
     i = 0
     for line in f:
         i += 1
