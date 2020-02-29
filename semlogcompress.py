@@ -15,43 +15,58 @@ colors = {
 }
 
 def process(fn, verbose, limit_lines):
-    msgs = {}
-
     if fn == "-":
         f = sys.stdin
     else:
         f = open(fn)
-    i = 0
-    for line in f:
-        i += 1
-        if limit_lines is not None and i > limit_lines:
-            break
 
-        line = line.strip()
-        #print(line)
-        # m - month, d - day, t - time, ip - ipv4 address, dev - device; dt - date
-        if "fw" in fn:
-            dt, rule, dev, port, *r = line.split()
-        else:
-            m, d, t, ip, dev, *r = line.split()
-        r = " ".join(r)
-        if verbose:
-            print(r)
+    msgs = process_internal(f, verbose, limit_lines, fn)
 
-        clustered = False
-        for msg in msgs:
-            sm = difflib.SequenceMatcher(None, msg, r)
-            smr = sm.ratio()
-            if verbose:
-                print(i, smr)
-            if smr > 0.8:
-                msgs[msg].append(r)
-                clustered = True
-                break
-        if not clustered:
-            msgs[r] = [r]
+    f.close()
 
     return msgs
+
+def process_internal(f, verbose, limit_lines, fnx):
+    msgs = {}
+
+    i = 0
+    try:
+        for line in f:
+            i += 1
+            if limit_lines is not None and i > limit_lines:
+                break
+
+            process_line(line, msgs, verbose, i, fnx)
+    except KeyboardInterrupt:
+        print("(closing input)")
+
+    return msgs
+
+def process_line(line, msgs, verbose, i, fnx):
+    line = line.strip()
+    #print(line)
+    # m - month, d - day, t - time, ip - ipv4 address, dev - device; dt - date
+    # TODO eliminate fnx parameter and use auto-detection of fields
+    if "fw" in fnx:
+        dt, rule, dev, port, *r = line.split()
+    else:
+        m, d, t, ip, dev, *r = line.split()
+    r = " ".join(r)
+    if verbose:
+        print(r)
+
+    clustered = False
+    for msg in msgs:
+        sm = difflib.SequenceMatcher(None, msg, r)
+        smr = sm.ratio()
+        if verbose:
+            print(i, smr)
+        if smr > 0.8:
+            msgs[msg].append(r)
+            clustered = True
+            break
+    if not clustered:
+        msgs[r] = [r]
 
 def typeget(s):
     if s.isdigit():
