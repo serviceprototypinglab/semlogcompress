@@ -20,9 +20,10 @@ Tool invocation:
 
  Run `slc -h' to find out about command line parameters.
  Run the chain
-   netlogserve examples/admin.log | slc -j - | slcnotify port:8008
+   netlogserve examples/admin.log | slc -j - | slcnotify portnumber:008
  to replay the example logfile, analyse it, and react on occurrences of
  a specified port number.
+ # This should be 8008 and requires an extend-and-merge fix in slc
 
 Documentation:
 

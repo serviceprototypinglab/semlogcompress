@@ -44,9 +44,18 @@ realstamp = int(time.time())
 delta = realstamp - firststamp
 if verbose:
     print("delta", delta, "s")
+quit = False
 for i in range(firststamp, laststamp + 1):
     while int(time.time()) - i < delta:
         time.sleep(0.5)
     if i in logs:
         for line in logs[i]:
-            print(line)
+            try:
+                print(line)
+            except:
+                quit = True
+                if verbose:
+                    print("discarding remaining lines")
+                break
+    if quit:
+        break

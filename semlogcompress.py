@@ -123,7 +123,10 @@ def handle(msgs, verbose, jsonformat):
             tlen += len(r) + 1
             tlines += 1
     if not jsonformat:
-        print("TOTAL", tlines, "lines", tlen, "bytes → compressed", len(msgs), "lines", toh, "bytes", round(100 * toh / tlen, 2), "%")
+        if msgs:
+            print("TOTAL", tlines, "lines", tlen, "bytes → compressed", len(msgs), "lines", toh, "bytes", round(100 * toh / tlen, 2), "%")
+        else:
+            print("Total statistics not supported in streaming mode or over empty logs.")
     elif msgs:
         print("]")
 
@@ -220,8 +223,8 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
         dpartprev = None
         if len(dpartsmer):
             dpartprev = dpartsmer[-1]
-        #print(dpart, dpartprev, types, typesext)
-        if dpartprev and typesext[dpart[0]] == typesext[dpartprev[0]] and dpartprev[0] + len(dpartprev[1]) == dpart[0]:
+        #print("dpart(prev):", dpart, dpartprev, "types(ext):", types, typesext)
+        if dpartprev and dpart[0] in typesext and dpartprev[0] in typesext and typesext[dpart[0]] == typesext[dpartprev[0]] and dpartprev[0] + len(dpartprev[1]) == dpart[0]:
             dpartmer = (dpartprev[0], "*" * (len(dpartprev[1]) + len(dpart[1])))
             #print("merge", dpartsmer[-1], dpart, "=>", dpartmer)
             dpartsmer[-1] = dpartmer
