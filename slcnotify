@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+
+import jsonpath_rw
+import json
+import time
+import sys
+
+colors = {
+  "red": "\u001b[31m",
+  "blue": "\u001b[34m",
+  "reset": "\u001b[0m"
+}
+
+class DB:
+    def __init__(self, kb):
+        self.kb = kb
+
+    def merge(self, db):
+        self.kb.update(db.kb)
+
+    def __repr__(self):
+        return colors["blue"] + "DB(" + str(self.kb) + ")" + colors["reset"]
+
+class Notify:
+    def __init__(self, cond, hook=None, once=False):
+        self.cond = cond
+        self.hook = hook
+        self.once = once
+        self.done = {}
+
+    def check(self, key, value):
+        if key in self.cond:
+            trigger = False
+            if value == self.cond[key] or str(value) == str(self.cond[key]):
+                trigger = True
+            if type(value) == list and (self.cond[key] in value or self.cond[key] in [str(x) for x in value]):
+                trigger = True
+            if trigger:
+                if self.once:
+                    if key in self.done and self.done[key] == self.cond[key]:
+                        return
+                    self.done[key] = self.cond[key]
+                if self.hook:
+                    self.hook(key, self.cond[key], value)
+                else:
+                    print(colors["red"] + "Trigger:" + str(key) + ":" + str(self.cond[key]) + " @ " + str(value) + colors["reset"])
+
+def process(stream, notify=None):
+    cs = stream
+    if cs.startswith("["):
+        cs = cs[1:]
+    if cs.startswith(","):
+        cs = cs[1:]
+    if cs.endswith("]"):
+        cs = cs[:-1]
+    if cs.endswith(","):
+        cs = cs[:-1]
+    cs = "[" + cs + "]"
+    print("> raw stream", stream)
+    print("> clr stream", cs)
+
+    d = json.loads(cs)
+    expr = jsonpath_rw.parse("[*].*")
+
+    kb = {}
+    for match in expr.find(d):
+        k = str(match.full_path).split(".")[1]
+        kb[k] = match.value
+
+        if notify:
+            notify.check(k, match.value)
+
+    return DB(kb)
+
+test = False
+if len(sys.argv) == 2 and sys.argv[1] == "test":
+    test = True
+
+if test:
+    notify = Notify({"port": "8008"})
+
+    stream = '[{"port": [8000]}'
+    ts = stream
+    db = process(stream, notify)
+    time.sleep(1)
+    stream = ', {"port": [8000, 8008]}'
+    ts += stream
+    db.merge(process(stream, notify))
+    time.sleep(1)
+    stream = ', {"port": [8000, 8008, 12000]}]'
+    ts += stream
+    db.merge(process(stream, notify))
+    print("DB", db)
+
+    notify2 = Notify({"port": 8008}, once=True)
+
+    print("TS", ts)
+    db = process(ts, notify2)
+    print("DB", db)
+else:
+    nargs = {}
+    error = False
+    for arg in sys.argv[1:]:
+        try:
+            k, v = arg.split(":")
+        except:
+            error = True
+        else:
+            nargs[k] = v
+    if error:
+        print("Syntax: slcnotify [notifykey:value] ...", file=sys.stderr)
+        exit(-1)
+
+    notify = Notify(nargs)
+    f = sys.stdin
+    db = DB({})
+    for i, line in enumerate(f):
+        db.merge(process(line.strip(), notify))
+        print(f"DB (line{i})", db)
