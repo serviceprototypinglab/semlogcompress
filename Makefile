@@ -6,3 +6,4 @@ all:
 install:
 	@sudo cp slc slcnotify slcgrep netlogserve /usr/local/bin
 	@sudo cp semlogcompress.py $(PKGDIR)
+	@sudo pip3 install -r dependencies.txt
