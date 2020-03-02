@@ -2,6 +2,7 @@ import difflib
 import sys
 import os
 import re
+import json
 
 colors = {
   "red": "\u001b[31m",
@@ -14,7 +15,7 @@ colors = {
   "reset": "\u001b[0m"
 }
 
-def process(fn, verbose, limit_lines):
+def process(fn, verbose, limit_lines, jsonformat):
     if fn == "-":
         f = sys.stdin
         hook = True
@@ -22,13 +23,19 @@ def process(fn, verbose, limit_lines):
         f = open(fn)
         hook = False
 
-    msgs = process_internal(f, verbose, limit_lines, fn, hook)
+    if jsonformat:
+        print("[")
+    msgs = process_internal(f, verbose, limit_lines, fn, hook, jsonformat)
+    if jsonformat and hook:
+        print("]")
 
     f.close()
 
+    if hook:
+        return []
     return msgs
 
-def process_internal(f, verbose, limit_lines, fnx, hook):
+def process_internal(f, verbose, limit_lines, fnx, hook, jsonformat):
     msgs = {}
 
     i = 0
@@ -38,13 +45,13 @@ def process_internal(f, verbose, limit_lines, fnx, hook):
             if limit_lines is not None and i > limit_lines:
                 break
 
-            process_line(line, msgs, verbose, i, fnx, hook)
+            process_line(line, msgs, verbose, i, fnx, hook, jsonformat)
     except KeyboardInterrupt:
         print("(closing input)")
 
     return msgs
 
-def process_line(line, msgs, verbose, i, fnx, hook):
+def process_line(line, msgs, verbose, i, fnx, hook, jsonformat):
     line = line.strip()
     #print(line)
     # m - month, d - day, t - time, ip - ipv4 address, dev - device; dt - date
@@ -55,7 +62,7 @@ def process_line(line, msgs, verbose, i, fnx, hook):
         m, d, t, ip, dev, *r = line.split()
     r = " ".join(r)
     if verbose:
-        print(r)
+        print("/", r)
 
     clustered = False
     for msg in msgs:
@@ -72,7 +79,7 @@ def process_line(line, msgs, verbose, i, fnx, hook):
         msg = r
 
     if hook:
-        handle_msg(msgs, msg, verbose, 0)
+        handle_msg(msgs, msg, verbose, 0, jsonformat)
 
 def typeget(s):
     if s.isdigit():
@@ -82,7 +89,7 @@ def typeget(s):
     else:
         return "mixed"
 
-def printpatterns(dparts, r, extra=""):
+def printpatterns(dparts, r, jsonformat, extra=""):
     dblocks = ""
     lastb = 0
     oh = 0
@@ -95,17 +102,18 @@ def printpatterns(dparts, r, extra=""):
         oh += len(str(dpart[0])) + len(dpart[1])
     if lastb < len(r):
         dblocks += colors["cyan"] + r[lastb:] + colors["reset"]
-    print("=", dblocks, "(log line with patterns) " + extra)
+    if not jsonformat:
+        print("=", dblocks, "(log line with patterns) " + extra)
     return oh
 
-def handle(msgs, verbose):
+def handle(msgs, verbose, jsonformat):
     retlist = []
 
     if verbose:
         print("---")
     toh = 0
     for msg in sorted(msgs):
-        retlist_line, toh = handle_msg(msgs, msg, verbose, toh)
+        retlist_line, toh = handle_msg(msgs, msg, verbose, toh, jsonformat)
         retlist += retlist_line
 
     tlen = 0
@@ -114,11 +122,14 @@ def handle(msgs, verbose):
         for r in msgs[msg]:
             tlen += len(r) + 1
             tlines += 1
-    print("TOTAL", tlines, "lines", tlen, "bytes → compressed", len(msgs), "lines", toh, "bytes", round(100 * toh / tlen, 2), "%")
+    if not jsonformat:
+        print("TOTAL", tlines, "lines", tlen, "bytes → compressed", len(msgs), "lines", toh, "bytes", round(100 * toh / tlen, 2), "%")
+    elif msgs:
+        print("]")
 
     return retlist
 
-def handle_msg(msgs, msg, verbose, toh):
+def handle_msg(msgs, msg, verbose, toh, jsonformat):
     retlist = []
 
     types = {}
@@ -154,7 +165,7 @@ def handle_msg(msgs, msg, verbose, toh):
     dparts = sorted(alldiff.items())
     if verbose:
         print("#", dparts)
-    oh = printpatterns(dparts, r)
+    oh = printpatterns(dparts, r, jsonformat)
 
     for j in range(len(dparts)):
         if not dparts[len(dparts) - j - 1][1]:
@@ -209,7 +220,8 @@ def handle_msg(msgs, msg, verbose, toh):
         dpartprev = None
         if len(dpartsmer):
             dpartprev = dpartsmer[-1]
-        if dpartprev and types[dpart[0]] == types[dpartprev[0]] and dpartprev[0] + len(dpartprev[1]) == dpart[0]:
+        #print(dpart, dpartprev, types, typesext)
+        if dpartprev and typesext[dpart[0]] == typesext[dpartprev[0]] and dpartprev[0] + len(dpartprev[1]) == dpart[0]:
             dpartmer = (dpartprev[0], "*" * (len(dpartprev[1]) + len(dpart[1])))
             #print("merge", dpartsmer[-1], dpart, "=>", dpartmer)
             dpartsmer[-1] = dpartmer
@@ -217,14 +229,15 @@ def handle_msg(msgs, msg, verbose, toh):
             dpartsmer.append(dpart)
     if verbose:
         print("#", dpartsmer, "extended and merged")
-    printpatterns(dpartsmer, r, "(extended and merged)")
+    printpatterns(dpartsmer, r, jsonformat, "(extended and merged)")
 
     times = str(len(msgs[msg])) + " times"
     toh += len(msg) + oh
-    if len(msg):
-        print("=", colors["cyan"] + "compression ratio " + str(round(100 * (len(msg) + oh) / (len(msg) * len(msgs[msg])))) + "% / " + times + colors["reset"])
-    else:
-        print("=", colors["cyan"] + "no compression ratio / empty line" + colors["reset"])
+    if not jsonformat:
+        if len(msg):
+            print("=", colors["cyan"] + "compression ratio " + str(round(100 * (len(msg) + oh) / (len(msg) * len(msgs[msg])))) + "% / " + times + colors["reset"])
+        else:
+            print("=", colors["cyan"] + "no compression ratio / empty line" + colors["reset"])
 
     #retlist.append((msg, exdiff))
     retlist.append((msg, msgs[msg]))
@@ -233,10 +246,11 @@ def handle_msg(msgs, msg, verbose, toh):
     lastpos = 0
     lastlen = 0
     for dpart in dpartsmer:
+        #print("//", dpart, types, typesext)
         if not len(dpart[1]):
             continue
         semtype = "unknown"
-        if types[dpart[0]] == "digit" and len(dpart[1]) in (4, 5):
+        if typesext[dpart[0]] == "digit" and len(dpart[1]) in (4, 5):
             semtype = "portnumber"
         i = 1
         semtypeorig = semtype
@@ -266,7 +280,10 @@ def handle_msg(msgs, msg, verbose, toh):
         knowledge[semtype] = data
         lastpos = dpart[0]
         lastlen = len(dpart[1]) + 1
-    print(">>> knowledge", knowledge)
+    if not jsonformat:
+        print(">>> knowledge", knowledge)
+    else:
+        print(json.dumps(knowledge) + ",")
 
     return retlist, toh
 

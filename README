@@ -1,12 +1,15 @@
-Semantic log compression and search prototype
+Semantic log compression, search and alerting prototype
+-------------------------------------------------------
 
 The aim of this software is to identify (with some smart logic,
 eventually with some AI) semantic similarities between lines of log
 files and to use these similarities for a high compression ratio.
 
-The 'semlogcompress' tool (we could rename it to 'sc') does the
-compression, and the 'scgrep' tool is for search in analogy to the
-regular grep. Later, a notification/alerting tool will be added.
+The 'slc' tool performs the extraction of attributes and the compression
+and index creation, and the 'slcgrep' tool is for indexed search in
+analogy to the regular grep. Additionally, the 'slcnotify' tool is
+available to trigger hooks upon occurrence of an attribute value.
+Finally, 'netlogserve' is used to emulate a networked logging service.
 
 Even though the analysis starts with syntactic tokenisation, the
 potential to compress semantically is high. For instance:
@@ -17,6 +20,10 @@ Often, only few bytes (e.g. IP address, port number, time stamp, user
 id) change while the rest of the log messages remains the same. This
 provides a high potential for compression.
 
+Tool installation:
+
+# ...
+
 Tool invocation:
 
-Run ./semlogcompress -h to find out about command line parameters.
+Run slc -h to find out about command line parameters.

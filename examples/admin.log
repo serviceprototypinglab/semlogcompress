@@ -1,0 +1,5 @@
+Jan 29 01:00:00 192.168.0.1 dev1: HTTP request on port 8000, response code 200 done
+Jan 29 01:00:02 192.168.0.1 dev1: HTTP request on port 8000, response code 200 done
+Jan 29 01:00:05 192.168.0.1 dev1: HTTP request on port 8008, response code 200 done
+Jan 29 01:00:06 192.168.0.1 dev1: HTTP request on port 8000, response code 404 done
+Jan 29 01:00:10 192.168.0.1 dev1: Shutdown of HTTP server
