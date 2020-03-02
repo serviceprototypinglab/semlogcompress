@@ -1,0 +1,52 @@
+#!/usr/bin/env -S python3 -u
+
+import datetime
+import time
+import sys
+
+if len(sys.argv) < 2:
+    print("Syntax: netlogserve [-v] <filename>", file=sys.stderr)
+    exit(-1)
+
+verbose = False
+fn = sys.argv[1]
+if fn == "-v":
+    verbose = True
+    fn = sys.argv[2]
+
+f = open(fn)
+lines = [line.strip() for line in f.readlines()]
+f.close()
+
+logs = {}
+
+month = {"Jan": 1, "Feb": 2, "Mar": 3, "Apr": 4, "May": 5, "Jun": 6, "Jul": 7, "Aug": 8, "Sep": 9, "Oct": 10, "Nov": 11, "Dec": 12}
+
+year = 2019
+firststamp = None
+laststamp = None
+for line in lines:
+    try:
+        m, d, hms, *rest = line.split()
+        hms_h, hms_m, hms_s = hms.split(":")
+        dt = datetime.datetime(year, month[m], int(d), int(hms_h), int(hms_m), int(hms_s))
+    except:
+        print("Parse error - incorrect log format (lines need to begin with MMM DD hh:mm:ss)", file=sys.stderr)
+        exit(-1)
+    if verbose:
+        print("load", m, d, hms, "→", dt)
+    laststamp = int(dt.timestamp())
+    logs[laststamp] = logs.get(laststamp, []) + [line]
+    if not firststamp:
+        firststamp = laststamp
+
+realstamp = int(time.time())
+delta = realstamp - firststamp
+if verbose:
+    print("delta", delta, "s")
+for i in range(firststamp, laststamp + 1):
+    while int(time.time()) - i < delta:
+        time.sleep(0.5)
+    if i in logs:
+        for line in logs[i]:
+            print(line)

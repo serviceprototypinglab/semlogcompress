@@ -5,3 +5,9 @@ local:10.1.1.90/***5*
     !!! in latest implementation, these two change sets are now connected into a contiguous one based on type equality of the '5' in between
  -> should identify as port number because it is close to IP address (more false positive likelihood with lower port numbers though)
     !!! in latest implementation, the identification is now done (but only for ports, not for IP addresses or anything else yet)
+
+Even though the analysis starts with syntactic tokenisation, the potential to compress semantically is high. For instance:
+ 192.168.0.19 -> IP address is 12 bytes long as string
+ as integer: 4 bytes
+ as subnet: 2 fixed bytes + 2 changing bytes
+Often, only few bytes (e.g. IP address, port number, time stamp, user id) change while the rest of the log messages remains the same. This provides a high potential for compression.
