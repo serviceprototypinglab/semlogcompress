@@ -90,7 +90,7 @@ def typeget(s):
     else:
         return "mixed"
 
-def printpatterns(dparts, r, jsonformat, extra=""):
+def printpatterns(dparts, r, jsonformat, fdiff, extra=""):
     dblocks = ""
     lastb = 0
     oh = 0
@@ -98,8 +98,14 @@ def printpatterns(dparts, r, jsonformat, extra=""):
         #if lastb is not None and len(dpart[1]) != 0:
         #    dblocks += colors["red"] + r[lastb:dpart[0]] + colors["reset"]
         dblocks += colors["cyan"] + r[lastb:dpart[0]] + colors["reset"]
-        dblocks += colors["red"] + dpart[1] + colors["reset"]
-        lastb = dpart[0] + len(dpart[1])
+        if type(dpart[1]) == str:
+            dblocks += colors["red"] + dpart[1] + colors["reset"]
+        else:
+            dblocks += colors["red"] + dpart[1][0] + ".." + dpart[1][1] + colors["reset"]
+        if fdiff:
+            lastb = dpart[0] + len(fdiff[dpart[0]])
+        else:
+            lastb = dpart[0] + len(dpart[1])
         oh += len(str(dpart[0])) + len(dpart[1])
     if lastb < len(r):
         dblocks += colors["cyan"] + r[lastb:] + colors["reset"]
@@ -152,14 +158,32 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
         cblocks = ""
         lastb = None
         diff = []
+        fdiff = {}
         for block in blocks:
             if lastb is not None and block.size != 0:
                 cblocks += colors["red"] + r[lastb:block.b] + colors["reset"]
                 diff.append((lastb, r[lastb:block.b]))
                 exdiff[lastb] = exdiff.get(lastb, []) + [r[lastb:block.b]]
-                if not lastb in alldiff or block.b - lastb > len(alldiff[lastb]):
-                    alldiff[lastb] = "*" * (block.b - lastb)
+                #if not lastb in alldiff or block.b - lastb > len(alldiff[lastb]):
+                if True:
+                    ds = "*" * (block.b - lastb)
+                    if not lastb in alldiff:
+                        alldiff[lastb] = ds
+                    else:
+                        d = block.b - lastb
+                        if type(alldiff[lastb]) == str:
+                            dsold = alldiff[lastb]
+                            if d > len(dsold):
+                                alldiff[lastb] = (dsold, ds)
+                            elif d < len(dsold):
+                                alldiff[lastb] = (ds, dsold)
+                        else:
+                            if d < len(alldiff[lastb][0]):
+                                alldiff[lastb] = (alldiff[lastb][0], ds)
+                            elif d > len(alldiff[lastb][1]):
+                                alldiff[lastb] = (ds, alldiff[lastb][1])
                     types[lastb] = typeget(r[lastb:block.b])
+                    fdiff[lastb] = ds
             cblocks += colors["green"] + r[block.b:block.b + block.size] + colors["reset"]
             lastb = block.b + block.size
         if verbose:
@@ -168,8 +192,8 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
 
     dparts = sorted(alldiff.items())
     if verbose:
-        print("#", dparts)
-    oh = printpatterns(dparts, r, jsonformat)
+        print("#", dparts, fdiff)
+    oh = printpatterns(dparts, r, jsonformat, fdiff)
 
     for j in range(len(dparts)):
         if not dparts[len(dparts) - j - 1][1]:
@@ -238,7 +262,7 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
             dpartsmer.append(dpart)
     if verbose:
         print("#", dpartsmer, "extended and merged")
-    printpatterns(dpartsmer, r, jsonformat, "(extended and merged)")
+    printpatterns(dpartsmer, r, jsonformat, None, "(extended and merged)")
 
     times = str(len(msgs[msg])) + " times"
     toh += len(msg) + oh
