@@ -11,3 +11,5 @@ Even though the analysis starts with syntactic tokenisation, the potential to co
  as integer: 4 bytes
  as subnet: 2 fixed bytes + 2 changing bytes
 Often, only few bytes (e.g. IP address, port number, time stamp, user id) change while the rest of the log messages remains the same. This provides a high potential for compression.
+
+Bugs: handling of character removals and additions ("icmp" + "tcp"; "bb" + "aaa" + "c")

@@ -53,7 +53,8 @@ def process_internal(f, verbose, limit_lines, fnx, hook, jsonformat):
 
 def process_line(line, msgs, verbose, i, fnx, hook, jsonformat):
     line = line.strip()
-    #print(line)
+    if os.getenv("DEBUG"):
+        print(line)
     # m - month, d - day, t - time, ip - ipv4 address, dev - device; dt - date
     # TODO eliminate fnx parameter and use auto-detection of fields
     if "fw" in fnx:
@@ -188,14 +189,16 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
 
     dpartsext = dparts[:]
     typesext = {}
-    #print("R", r, "T", types)
+    if os.getenv("DEBUG"):
+        print("R", r, "T", types)
     laststop = None
     for j in range(len(dpartsext)):
         if dparts[j][1]:
             start = dparts[j][0]
             stop = start + len(dparts[j][1]) - 1
             t = types[dparts[j][0]]
-            #print(dparts[j], t, start, "..", stop)
+            if os.getenv("DEBUG"):
+                print(dparts[j], t, start, "..", stop)
             estart = start
             estop = stop
             for k in range(1, 99):
@@ -212,7 +215,8 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
                     estop += 1
                 else:
                     break
-            #print("==> extended type range", estart, estop)
+            if os.getenv("DEBUG"):
+                print("==> extended type range", estart, estop)
             dpartsext[j] = (estart, "*" * (estop - estart + 1))
             typesext[estart] = types[start]
             laststop = estop
@@ -223,10 +227,12 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
         dpartprev = None
         if len(dpartsmer):
             dpartprev = dpartsmer[-1]
-        #print("dpart(prev):", dpart, dpartprev, "types(ext):", types, typesext)
+        if os.getenv("DEBUG"):
+            print("dpart(prev):", dpart, dpartprev, "types(ext):", types, typesext)
         if dpartprev and dpart[0] in typesext and dpartprev[0] in typesext and typesext[dpart[0]] == typesext[dpartprev[0]] and dpartprev[0] + len(dpartprev[1]) == dpart[0]:
             dpartmer = (dpartprev[0], "*" * (len(dpartprev[1]) + len(dpart[1])))
-            #print("merge", dpartsmer[-1], dpart, "=>", dpartmer)
+            if os.getenv("DEBUG"):
+                print("merge", dpartsmer[-1], dpart, "=>", dpartmer)
             dpartsmer[-1] = dpartmer
         else:
             dpartsmer.append(dpart)
@@ -249,7 +255,8 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
     lastpos = 0
     lastlen = 0
     for dpart in dpartsmer:
-        #print("//", dpart, types, typesext)
+        if os.getenv("DEBUG"):
+            print("//", dpart, types, typesext)
         if not len(dpart[1]):
             continue
         semtype = "unknown"
@@ -265,7 +272,9 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
             semre = "(\\d{1," + str(len(dpart[1])) + "})"
         else:
             semre = "(.{1," + str(len(dpart[1])) + "})"
-        regex = msg[lastpos + lastlen:dpart[0] + 1] + semre
+        # FIXME: leaving/removing the +1 after dpart[0] breaks one out of two regression tests
+        # presumably related to deletions
+        regex = msg[lastpos + lastlen:dpart[0]] + semre
         if verbose:
             print(">", semtype, regex)
         data = []
