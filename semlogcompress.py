@@ -214,15 +214,15 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
     dpartsext = dparts[:]
     typesext = {}
     if os.getenv("DEBUG"):
-        print("R", r, "T", types)
+        print("R", r, "T", types, fdiff)
     laststop = None
     for j in range(len(dpartsext)):
         if dparts[j][1]:
             start = dparts[j][0]
-            stop = start + len(dparts[j][1]) - 1
+            stop = start + len(fdiff[start]) - 1
             t = types[dparts[j][0]]
             if os.getenv("DEBUG"):
-                print(dparts[j], t, start, "..", stop)
+                print("extend", fdiff[dparts[j][0]], dparts[j][1], t, start, "..", stop)
             estart = start
             estop = stop
             for k in range(1, 99):
@@ -241,7 +241,10 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
                     break
             if os.getenv("DEBUG"):
                 print("==> extended type range", estart, estop)
-            dpartsext[j] = (estart, "*" * (estop - estart + 1))
+            if type(dparts[j][1]) == str:
+                dpartsext[j] = (estart, "*" * (estop - estart + 1))
+            else:
+                dpartsext[j] = (estart, ("*" * (estop - estart + 1), dparts[j][1][1]))
             typesext[estart] = types[start]
             laststop = estop
     if verbose:
@@ -262,7 +265,7 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
             dpartsmer.append(dpart)
     if verbose:
         print("#", dpartsmer, "extended and merged")
-    printpatterns(dpartsmer, r, jsonformat, None, "(extended and merged)")
+    printpatterns(dpartsmer, r, jsonformat, fdiff, "(extended and merged)")
 
     times = str(len(msgs[msg])) + " times"
     toh += len(msg) + oh
@@ -286,16 +289,26 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
         semtype = "unknown"
         if typesext[dpart[0]] == "digit" and len(dpart[1]) in (4, 5):
             semtype = "portnumber"
+        if typesext[dpart[0]] == "alpha":
+            semtype = "word"
         i = 1
         semtypeorig = semtype
         while semtype in knowledge:
             i += 1
             semtype = semtypeorig + str(i)
         semre = ""
-        if semtypeorig == "portnumber":
-            semre = "(\\d{1," + str(len(dpart[1])) + "})"
+        if type(dpart[1]) == str:
+            patmin = 1
+            patmax = len(dpart[1])
         else:
-            semre = "(.{1," + str(len(dpart[1])) + "})"
+            patmin = len(dpart[1][0])
+            patmax = len(dpart[1][1])
+        if semtypeorig == "portnumber":
+            semre = "(\\d{" + str(patmin) + "," + str(patmax) + "})"
+        elif semtypeorig == "word":
+            semre = "(\\w{" + str(patmin) + "," + str(patmax) + "})"
+        else:
+            semre = "(.{" + str(patmin) + "," + str(patmax) + "})"
         # FIXME: leaving/removing the +1 after dpart[0] breaks one out of two regression tests
         # presumably related to deletions
         regex = msg[lastpos + lastlen:dpart[0]] + semre
