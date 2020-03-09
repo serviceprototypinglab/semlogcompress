@@ -106,6 +106,8 @@ def printpatterns(dparts, r, jsonformat, fdiff, extra=""):
             lastb = dpart[0] + len(fdiff[dpart[0]])
         else:
             lastb = dpart[0] + len(dpart[1])
+        if type(dpart[1]) == tuple and dpart[1][0] == "":
+            lastb -= 1
         oh += len(str(dpart[0])) + len(dpart[1])
     if lastb < len(r):
         dblocks += colors["cyan"] + r[lastb:] + colors["reset"]
@@ -160,32 +162,47 @@ def handle_msg(msgs, msg, verbose, toh, jsonformat):
         diff = []
         fdiff = {}
         for block in blocks:
+            reverse = False
+            bpos = block.b
+            bpart = r[lastb:bpos]
             if lastb is not None and block.size != 0:
-                cblocks += colors["red"] + r[lastb:block.b] + colors["reset"]
-                diff.append((lastb, r[lastb:block.b]))
-                exdiff[lastb] = exdiff.get(lastb, []) + [r[lastb:block.b]]
-                #if not lastb in alldiff or block.b - lastb > len(alldiff[lastb]):
-                if True:
-                    ds = "*" * (block.b - lastb)
-                    if not lastb in alldiff:
-                        alldiff[lastb] = ds
+                if block.b - lastb == 0:
+                    reverse = True
+                    bpos = block.a
+                    bpart = msg[lastb:bpos]
+                if reverse:
+                    cblocks += colors["red"] + "(" + bpart + ")" + colors["reset"]
+                else:
+                    cblocks += colors["red"] + bpart + colors["reset"]
+                diff.append((lastb, bpart))
+                if reverse:
+                    exdiff[lastb] = exdiff.get(lastb, []) + [bpart, ""]
+                else:
+                    exdiff[lastb] = exdiff.get(lastb, []) + [bpart]
+                ds = "*" * (bpos - lastb)
+                #if not lastb in alldiff or bpos - lastb > len(alldiff[lastb]):
+                if not lastb in alldiff:
+                    if reverse:
+                        alldiff[lastb] = ("", ds)
                     else:
-                        d = block.b - lastb
-                        if type(alldiff[lastb]) == str:
-                            dsold = alldiff[lastb]
-                            if d > len(dsold):
-                                alldiff[lastb] = (dsold, ds)
-                            elif d < len(dsold):
-                                alldiff[lastb] = (ds, dsold)
-                        else:
-                            if d < len(alldiff[lastb][0]):
-                                alldiff[lastb] = (alldiff[lastb][0], ds)
-                            elif d > len(alldiff[lastb][1]):
-                                alldiff[lastb] = (ds, alldiff[lastb][1])
-                    types[lastb] = typeget(r[lastb:block.b])
-                    fdiff[lastb] = ds
+                        alldiff[lastb] = ds
+                else:
+                    d = bpos - lastb
+                    if type(alldiff[lastb]) == str:
+                        dsold = alldiff[lastb]
+                        if d > len(dsold):
+                            alldiff[lastb] = (dsold, ds)
+                        elif d < len(dsold):
+                            alldiff[lastb] = (ds, dsold)
+                    else:
+                        if d < len(alldiff[lastb][0]):
+                            alldiff[lastb] = (alldiff[lastb][0], ds)
+                        elif d > len(alldiff[lastb][1]):
+                            alldiff[lastb] = (ds, alldiff[lastb][1])
+                types[lastb] = typeget(bpart)
+                fdiff[lastb] = ds
             cblocks += colors["green"] + r[block.b:block.b + block.size] + colors["reset"]
-            lastb = block.b + block.size
+            lastb = bpos + block.size
         if verbose:
             print("→", cblocks, "(diffed log line) (diff count D: " + str(len(diff)) + ")")
             print("D", colors["magenta"] + str(diff) + colors["reset"])
